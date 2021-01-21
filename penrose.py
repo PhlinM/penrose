@@ -324,7 +324,7 @@ class PenroseP3:
                                                                                 self.config['height'], viewbox),
                '    <defs>',
                '        <clipPath id="window">',
-               '            <rect x="0" y="0" width="10" height="10" transform="rotate(0)/>',
+               '            <rect x="0" y="0" width="10" height="10" transform="rotate(0)"/>',
                '        </clipPath>',
                '    </defs>']
         # The tiles' stroke widths scale with ngen
