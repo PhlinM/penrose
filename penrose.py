@@ -333,20 +333,23 @@ class PenroseP3:
         draw_rhombuses = self.config['draw-rhombuses']
         normal_arcs = self.config['normal-arcs']
         # Loop over the rhombuses to draw them
-        for e in self.elements:
-            if self.config['draw-tiles']:
-                svg.append('<path fill="{}" fill-opacity="{}" d="{}"/>'
+        if self.config['draw-tiles']:
+            svg.append('<g fill-opacity="{}">'.format(self.config['tile-opacity']))
+            for e in self.elements:
+                svg.append('<path fill="{}" d="{}"/>'
                            .format(self.get_tile_colour(e),
-                                   self.config['tile-opacity'],
                                    e.path(rhombus=draw_rhombuses)))
+            svg.append('</g>')
         # Loop over the rhombuses to draw the arcs
-        for e in self.elements:
-            if self.config['draw-arcs']:
+        elif self.config['draw-arcs']:
+            svg.append('<g fill="none" stroke-linecap="round">')
+            for e in self.elements:
                 arc1_d, arc2_d = e.arcs(proportion, half_arc=not draw_rhombuses, normal_arcs=normal_arcs)
-                svg.append('<path fill="none" stroke="{}" stroke-linecap="round" d="{}"/>'
+                svg.append('<path stroke="{}" d="{}"/>'
                            .format(self.config['Aarc-colour'], arc1_d))
-                svg.append('<path fill="none" stroke="{}" stroke-linecap="round" d="{}"/>'
+                svg.append('<path stroke="{}" d="{}"/>'
                            .format(self.config['Carc-colour'], arc2_d))
+            svg.append('</g>')
         svg.append('</g>\n</svg>')
         return '\n'.join(svg)
 
