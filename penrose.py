@@ -322,35 +322,40 @@ class PenroseP3:
                '<svg width="{}" height="{}" viewBox="{}"'
                ' preserveAspectRatio="xMidYMid meet" version="1.1"'
                ' baseProfile="full" xmlns="http://www.w3.org/2000/svg">'.format(self.config['width'],
-                                                                                self.config['height'], viewbox)]
+                                                                                self.config['height'], viewbox),
+               '    <defs>',
+               '        <clipPath id="window">',
+               '            <rect x="0" y="0" width="10" height="10"/>',
+               '        </clipPath>',
+               '    </defs>']
         # The tiles' stroke widths scale with ngen
         stroke_width = str(psi ** self.ngen * self.scale *
                            self.config['base-stroke-width'])
-        svg.append('<g style="stroke:{}; stroke-width: {};'
-                   ' stroke-linejoin: round;">'
+        svg.append('    <g style="stroke:{}; stroke-width: {};'
+                   ' stroke-linejoin: round;" clip-path="none">'
                    .format(self.config['stroke-colour'], stroke_width))
         proportion = self.config['proportion']
         draw_rhombuses = self.config['draw-rhombuses']
         normal_arcs = self.config['normal-arcs']
         # Loop over the rhombuses to draw them
         if self.config['draw-tiles']:
-            svg.append('<g fill-opacity="{}">'.format(self.config['tile-opacity']))
+            svg.append('        <g fill-opacity="{}">'.format(self.config['tile-opacity']))
             for e in self.elements:
-                svg.append('<path fill="{}" d="{}"/>'
+                svg.append('            <path fill="{}" d="{}"/>'
                            .format(self.get_tile_colour(e),
                                    e.path(rhombus=draw_rhombuses)))
-            svg.append('</g>')
+            svg.append('        </g>')
         # Loop over the rhombuses to draw the arcs
         if self.config['draw-arcs']:
-            svg.append('<g fill="none" stroke-linecap="round">')
+            svg.append('        <g fill="none" stroke-linecap="round">')
             for e in self.elements:
                 arc1_d, arc2_d = e.arcs(proportion, half_arc=not draw_rhombuses, normal_arcs=normal_arcs)
-                svg.append('<path stroke="{}" d="{}"/>'
+                svg.append('            <path stroke="{}" d="{}"/>'
                            .format(self.config['Aarc-colour'], arc1_d))
-                svg.append('<path stroke="{}" d="{}"/>'
+                svg.append('            <path stroke="{}" d="{}"/>'
                            .format(self.config['Carc-colour'], arc2_d))
-            svg.append('</g>')
-        svg.append('</g>\n</svg>')
+            svg.append('        </g>')
+        svg.append('    </g>\n</svg>')
         return '\n'.join(svg)
 
     def write_svg(self, filename):
