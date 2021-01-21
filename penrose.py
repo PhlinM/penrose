@@ -197,8 +197,7 @@ class PenroseP3:
                        'random-tile-colours': False,
                        'Stile-colour': '#08f',
                        'Ltile-colour': '#0035f3',
-                       'Aarc-colour': '#f00',
-                       'Carc-colour': '#00f',
+                       'arc-colour': '#f00',
                        'draw-tiles': True,
                        'draw-arcs': False,
                        'proportion': 0.7,
@@ -325,7 +324,7 @@ class PenroseP3:
                                                                                 self.config['height'], viewbox),
                '    <defs>',
                '        <clipPath id="window">',
-               '            <rect x="0" y="0" width="10" height="10"/>',
+               '            <rect x="0" y="0" width="10" height="10" transform="rotate(0)/>',
                '        </clipPath>',
                '    </defs>']
         # The tiles' stroke widths scale with ngen
@@ -347,13 +346,12 @@ class PenroseP3:
             svg.append('        </g>')
         # Loop over the rhombuses to draw the arcs
         if self.config['draw-arcs']:
-            svg.append('        <g fill="none" stroke-linecap="round">')
+            svg.append('        <g fill="none" stroke="{}" '
+                       'stroke-linecap="round">'.format(self.config['arc-colour']))
             for e in self.elements:
                 arc1_d, arc2_d = e.arcs(proportion, half_arc=not draw_rhombuses, normal_arcs=normal_arcs)
-                svg.append('            <path stroke="{}" d="{}"/>'
-                           .format(self.config['Aarc-colour'], arc1_d))
-                svg.append('            <path stroke="{}" d="{}"/>'
-                           .format(self.config['Carc-colour'], arc2_d))
+                svg.append('            <path d="{}"/>'.format(arc1_d))
+                svg.append('            <path d="{}"/>'.format(arc2_d))
             svg.append('        </g>')
         svg.append('    </g>\n</svg>')
         return '\n'.join(svg)

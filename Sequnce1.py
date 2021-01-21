@@ -12,8 +12,7 @@ scale = 100
 # Configuration of the tiling
 config = {'draw-arcs': True,
           'normal-arcs': False,
-          'Aarc-colour': '#000',
-          'Carc-colour': '#000',
+          'arc-colour': '#000',
           'draw-tiles': True}
 tiling = PenroseP3(scale, ngen=0, config=config)
 

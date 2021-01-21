@@ -9,11 +9,10 @@ scale = 100
 # Configuration of the tiling
 config = {'draw-arcs': True,
           'normal-arcs': False,
-          'Aarc-colour': '#000',
-          'Carc-colour': '#000',
-          'draw-tiles': False,
+          'arc-colour': 'brown',
+          'draw-tiles': True,
           'proportion': 0.5}
-tiling = PenroseP3(scale, ngen=4, config=config)
+tiling = PenroseP3(scale, ngen=3, config=config)
 
 # Create the initial tiles, a triangle
 theta = 2*math.pi / 5

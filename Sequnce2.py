@@ -13,8 +13,7 @@ theta = math.pi / 5
 # Configuration of the tiling
 config = {'draw-arcs': True,
           'normal-arcs': False,
-          'Aarc-colour': '#000',
-          'Carc-colour': '#000',
+          'arc-colour': '#000',
           'draw-tiles': True,
           'reflect-x': False,
           'rotate': theta/2}
