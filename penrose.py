@@ -341,7 +341,7 @@ class PenroseP3:
                                    e.path(rhombus=draw_rhombuses)))
             svg.append('</g>')
         # Loop over the rhombuses to draw the arcs
-        elif self.config['draw-arcs']:
+        if self.config['draw-arcs']:
             svg.append('<g fill="none" stroke-linecap="round">')
             for e in self.elements:
                 arc1_d, arc2_d = e.arcs(proportion, half_arc=not draw_rhombuses, normal_arcs=normal_arcs)
