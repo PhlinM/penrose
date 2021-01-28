@@ -10,8 +10,7 @@ phi = 1 / psi
 scale = 100
 # Configuration of the tiling
 config = {'draw-arcs': True,
-          'Aarc-colour': '#ff5e25',
-          'Carc-colour': 'none',
+          'arc-colour': '#ff5e25',
           'draw-titles': False,
           'Stile-colour': '#090',
           'Ltile-colour': '#9f3',
