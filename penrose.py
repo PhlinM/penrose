@@ -1,5 +1,8 @@
 import math
 import random
+import matplotlib.pyplot as plt
+from matplotlib.path import Path
+import matplotlib.patches as patches
 
 # A small tolerance for comparing floats for equality
 TOL = 1.e-5
@@ -11,6 +14,43 @@ phi2 = phi + 1
 phi4 = 3*phi + 2
 # psi**2 = 1 - psi
 psi2 = 1 - psi
+
+
+def intersection(start, end, centre):
+    """
+    Finds the intersection point from between the two tangents
+     at start and end on the circle centred at centre going
+      through start and end
+    """
+
+    if start + end == 2 * centre:
+        # tangents are parallel, so no intersection
+        raise ValueError
+    elif centre.imag == start.imag:
+        # tangent at start is parallel to y axis
+        x = start.real
+        m2 = (end.real - centre.real) / (centre.imag - end.imag)
+        c2 = end.imag - end.real * m2
+        y = m2 * x + c2
+    elif centre.imag == end.imag:
+        # tangent at end is parallel to y axis
+        x = end.real
+        m1 = (start.real - centre.real) / (centre.imag - start.imag)
+        c1 = start.imag - start.real * m1
+        y = m1 * x + c1
+    else:
+        # parameters for the tangents at the start and end for the circle on centre
+        m1 = (start.real - centre.real) / (centre.imag - start.imag)
+        m2 = (end.real - centre.real) / (centre.imag - end.imag)
+
+        c1 = start.imag - start.real * m1
+        c2 = end.imag - end.real * m2
+
+        # (x, y) coordinates of the control point
+        x = (c2 - c1) / (m1 - m2)
+        y = m1 * x + c1
+
+    return x, y
 
 
 class RobinsonTriangle:
@@ -118,6 +158,49 @@ class RobinsonTriangle:
         else:
             raise ValueError
         return arc1_d, arc2_d
+
+    def get_curve(self, U, V, W, proportion1):
+        """
+        Takes 3 vertices of a rhombus and calculates the start, control
+        and end points for a quadratic bezier curve
+        """
+
+        # Centre of the circle
+        centre = U + (U - V) * phi
+        # Start of the curve
+        start = U + (V - U) * proportion1
+        # How far end is from a vertices
+        proportion2 = math.sqrt(phi4 / 4 + proportion1 * (proportion1 + 2 * phi)) - phi2 / 2
+
+        if isinstance(self, BtileL):
+            # end is on the opposite edge to UV
+            end = W + (V - U) * proportion2
+        else:
+            # end is on UW
+            end = U + (W - U) * proportion2
+
+        x, y = intersection(start, end, centre)
+
+        vertices = [
+            (start.real, start.imag),  # Start
+            (x, y),                    # Control point
+            (end.real, end.imag)       # End
+        ]
+
+        return vertices
+
+    def curves(self, proportion):
+        """
+        Finds 2 sets of triple points to define 2 Bezier
+        curves defined over the rhombus A, B, C, D
+        """
+
+        # 4th point of the rhombus
+        D = self.A - self.B + self.C
+        #
+        curve1 = self.get_curve(self.B, self.C, self.A, proportion)
+        curve2 = self.get_curve(D, self.C, self.A, proportion)
+        return curve1, curve2
 
     def conjugate(self):
         """
@@ -361,3 +444,37 @@ class PenroseP3:
         svg = self.make_svg()
         with open(filename, 'w') as fo:
             fo.write(svg)
+
+    def make_plot(self):
+        """
+        Makes a matplotlib plot
+        """
+
+        # figure dimensions
+        x_min = y_min = -self.scale * self.config['margin']
+        x_max = y_max = self.scale * self.config['margin']
+        line_width = str(psi ** self.ngen * self.scale *
+                         self.config['base-stroke-width'])
+
+        proportion = self.config['proportion']
+        codes = [
+            Path.MOVETO,
+            Path.CURVE3,
+            Path.CURVE3,
+        ]
+
+        fig, ax = plt.subplots()
+        plt.axis('equal')
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+
+        for e in self.elements:
+            vertices1, vertices2 = e.curves(proportion)
+            path1 = Path(vertices1, codes)
+            path2 = Path(vertices2, codes)
+            patch1 = patches.PathPatch(path1, facecolor='none', lw=2)
+            patch2 = patches.PathPatch(path2, facecolor='none', lw=2)
+            ax.add_patch(patch1)
+            ax.add_patch(patch2)
+
+        plt.show()
