@@ -19,42 +19,16 @@ psi2 = 1 - psi
 def intersection(start, end, centre):
     """
     Finds the intersection point from between the two tangents
-     at start and end on the circle centred at centre going
-      through start and end
+    at start and end on the circle centred at centre.
     """
-    #
-    # if start + end == 2 * centre:
-    #     # tangents are parallel, so no intersection
-    #     raise ValueError
-    # elif centre.imag == start.imag:
-    #     # tangent at start is parallel to y axis
-    #     x = start.real
-    #     m2 = (end.real - centre.real) / (centre.imag - end.imag)
-    #     c2 = end.imag - end.real * m2
-    #     y = m2 * x + c2
-    # elif centre.imag == end.imag:
-    #     # tangent at end is parallel to y axis
-    #     x = end.real
-    #     m1 = (start.real - centre.real) / (centre.imag - start.imag)
-    #     c1 = start.imag - start.real * m1
-    #     y = m1 * x + c1
-    # else:
-    #     # parameters for the tangents at the start and end for the circle on centre
-    #     m1 = (start.real - centre.real) / (centre.imag - start.imag)
-    #     m2 = (end.real - centre.real) / (centre.imag - end.imag)
-    #
-    #     c1 = start.imag - start.real * m1
-    #     c2 = end.imag - end.real * m2
-    #
-    #     # (x, y) coordinates of the control point
-    #     x = (c2 - c1) / (m1 - m2)
-    #     y = m1 * x + c1
 
     centreToStart = start - centre
     centreToEnd = end - centre
     # direction vectors of the tangents
     m1 = centreToStart.imag - centreToStart.real * 1j
     m2 = centreToEnd.imag - centreToEnd.real * 1j
+
+    # Solving for the parameter in equation intersection = start + t * m1
     denominator = m1.imag * m2.real - m1.real * m2.imag
     numerator = (end.imag - start.imag) * m2.real + (start.real - end.real) * m2.imag
 
@@ -65,9 +39,7 @@ def intersection(start, end, centre):
         # tangents are parallel, so no intersection
         raise ValueError
 
-    z = start + (numerator / denominator) * m1
-
-    return z
+    return start + (numerator / denominator) * m1
 
 
 class RobinsonTriangle:
