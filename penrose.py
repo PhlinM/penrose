@@ -22,35 +22,52 @@ def intersection(start, end, centre):
      at start and end on the circle centred at centre going
       through start and end
     """
+    #
+    # if start + end == 2 * centre:
+    #     # tangents are parallel, so no intersection
+    #     raise ValueError
+    # elif centre.imag == start.imag:
+    #     # tangent at start is parallel to y axis
+    #     x = start.real
+    #     m2 = (end.real - centre.real) / (centre.imag - end.imag)
+    #     c2 = end.imag - end.real * m2
+    #     y = m2 * x + c2
+    # elif centre.imag == end.imag:
+    #     # tangent at end is parallel to y axis
+    #     x = end.real
+    #     m1 = (start.real - centre.real) / (centre.imag - start.imag)
+    #     c1 = start.imag - start.real * m1
+    #     y = m1 * x + c1
+    # else:
+    #     # parameters for the tangents at the start and end for the circle on centre
+    #     m1 = (start.real - centre.real) / (centre.imag - start.imag)
+    #     m2 = (end.real - centre.real) / (centre.imag - end.imag)
+    #
+    #     c1 = start.imag - start.real * m1
+    #     c2 = end.imag - end.real * m2
+    #
+    #     # (x, y) coordinates of the control point
+    #     x = (c2 - c1) / (m1 - m2)
+    #     y = m1 * x + c1
 
-    if start + end == 2 * centre:
+    centreToStart = start - centre
+    centreToEnd = end - centre
+    # direction vectors of the tangents
+    m1 = centreToStart.imag - centreToStart.real * 1j
+    m2 = centreToEnd.imag - centreToEnd.real * 1j
+    denominator = m1.imag * m2.real - m1.real * m2.imag
+    numerator = (end.imag - start.imag) * m2.real + (start.real - end.real) * m2.imag
+
+    if start == end:
+        # Tangents are coincident
+        return start
+    elif abs(denominator) == 0:
         # tangents are parallel, so no intersection
         raise ValueError
-    elif centre.imag == start.imag:
-        # tangent at start is parallel to y axis
-        x = start.real
-        m2 = (end.real - centre.real) / (centre.imag - end.imag)
-        c2 = end.imag - end.real * m2
-        y = m2 * x + c2
-    elif centre.imag == end.imag:
-        # tangent at end is parallel to y axis
-        x = end.real
-        m1 = (start.real - centre.real) / (centre.imag - start.imag)
-        c1 = start.imag - start.real * m1
-        y = m1 * x + c1
-    else:
-        # parameters for the tangents at the start and end for the circle on centre
-        m1 = (start.real - centre.real) / (centre.imag - start.imag)
-        m2 = (end.real - centre.real) / (centre.imag - end.imag)
 
-        c1 = start.imag - start.real * m1
-        c2 = end.imag - end.real * m2
+    z = start + (numerator / denominator) * m1
 
-        # (x, y) coordinates of the control point
-        x = (c2 - c1) / (m1 - m2)
-        y = m1 * x + c1
-
-    return x, y
+    return z
 
 
 class RobinsonTriangle:
@@ -179,12 +196,12 @@ class RobinsonTriangle:
             # end is on UW
             end = U + (W - U) * proportion2
 
-        x, y = intersection(start, end, centre)
+        control = intersection(start, end, centre)
 
         vertices = [
-            (start.real, start.imag),  # Start
-            (x, y),                    # Control point
-            (end.real, end.imag)       # End
+            (start.real, start.imag),      # Start
+            (control.real, control.imag),  # Control point
+            (end.real, end.imag)           # End
         ]
 
         return vertices
@@ -413,15 +430,15 @@ class PenroseP3:
         # The tiles' stroke widths scale with ngen
         stroke_width = str(psi ** self.ngen * self.scale *
                            self.config['base-stroke-width'])
-        svg.append('    <g style="stroke:{}; stroke-width: {};'
-                   ' stroke-linejoin: round;" clip-path="none">'
-                   .format(self.config['stroke-colour'], stroke_width))
+        svg.append('    <g stroke-width="{}" stroke-linejoin="round"'
+                   ' clip-path="none">'.format(stroke_width))
         proportion = self.config['proportion']
         draw_rhombuses = self.config['draw-rhombuses']
         normal_arcs = self.config['normal-arcs']
         # Loop over the rhombuses to draw them
         if self.config['draw-tiles']:
-            svg.append('        <g fill-opacity="{}">'.format(self.config['tile-opacity']))
+            svg.append('        <g stroke="{}" fill-opacity="{}">'
+                       .format(self.config['stroke-colour'], self.config['tile-opacity']))
             for e in self.elements:
                 svg.append('            <path fill="{}" d="{}"/>'
                            .format(self.get_tile_colour(e),
@@ -456,25 +473,32 @@ class PenroseP3:
         line_width = str(psi ** self.ngen * self.scale *
                          self.config['base-stroke-width'])
 
-        proportion = self.config['proportion']
-        codes = [
-            Path.MOVETO,
-            Path.CURVE3,
-            Path.CURVE3,
-        ]
-
         fig, ax = plt.subplots()
         plt.axis('equal')
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
 
+        proportion = self.config['proportion']
+
+        vertices, codes = [], []
+
+        #  Drawing commands
+        codes1 = [
+            Path.MOVETO,
+            Path.CURVE3,
+            Path.CURVE3,
+        ]
+
+        # Iterate over rhombuses of the tiling, calculate
+        # vertices for the paths and extend the collections
         for e in self.elements:
             vertices1, vertices2 = e.curves(proportion)
-            path1 = Path(vertices1, codes)
-            path2 = Path(vertices2, codes)
-            patch1 = patches.PathPatch(path1, facecolor='none', lw=2)
-            patch2 = patches.PathPatch(path2, facecolor='none', lw=2)
-            ax.add_patch(patch1)
-            ax.add_patch(patch2)
+            vertices += vertices1 + vertices2
+            codes += codes1 + codes1
 
+        # Create the path & patch object with the parameters
+        path = Path(vertices, codes)
+        patch = patches.PathPatch(path, fc='none',
+                                  ec='black', lw=50, capstyle='round')
+        ax.add_patch(patch)
         plt.show()
