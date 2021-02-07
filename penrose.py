@@ -1,5 +1,8 @@
 import math
 import random
+import matplotlib.pyplot as plt
+from matplotlib.path import Path
+import matplotlib.patches as patches
 
 # A small tolerance for comparing floats for equality
 TOL = 1.e-5
@@ -11,6 +14,32 @@ phi2 = phi + 1
 phi4 = 3*phi + 2
 # psi**2 = 1 - psi
 psi2 = 1 - psi
+
+
+def intersection(start, end, centre):
+    """
+    Finds the intersection point from between the two tangents
+    at start and end on the circle centred at centre.
+    """
+
+    centreToStart = start - centre
+    centreToEnd = end - centre
+    # direction vectors of the tangents
+    m1 = centreToStart.imag - centreToStart.real * 1j
+    m2 = centreToEnd.imag - centreToEnd.real * 1j
+
+    # Solving for the parameter in equation intersection = start + t * m1
+    denominator = m1.imag * m2.real - m1.real * m2.imag
+    numerator = (end.imag - start.imag) * m2.real + (start.real - end.real) * m2.imag
+
+    if start == end:
+        # Tangents are coincident
+        return start
+    elif abs(denominator) == 0:
+        # tangents are parallel, so no intersection
+        raise ValueError
+
+    return start + (numerator / denominator) * m1
 
 
 class RobinsonTriangle:
@@ -118,6 +147,49 @@ class RobinsonTriangle:
         else:
             raise ValueError
         return arc1_d, arc2_d
+
+    def get_curve(self, U, V, W, proportion1):
+        """
+        Takes 3 vertices of a rhombus and calculates the start, control
+        and end points for a quadratic bezier curve
+        """
+
+        # Centre of the circle
+        centre = U + (U - V) * phi
+        # Start of the curve
+        start = U + (V - U) * proportion1
+        # How far end is from a vertices
+        proportion2 = math.sqrt(phi4 / 4 + proportion1 * (proportion1 + 2 * phi)) - phi2 / 2
+
+        if isinstance(self, BtileL):
+            # end is on the opposite edge to UV
+            end = W + (V - U) * proportion2
+        else:
+            # end is on UW
+            end = U + (W - U) * proportion2
+
+        control = intersection(start, end, centre)
+
+        vertices = [
+            (start.real, start.imag),      # Start
+            (control.real, control.imag),  # Control point
+            (end.real, end.imag)           # End
+        ]
+
+        return vertices
+
+    def curves(self, proportion):
+        """
+        Finds 2 sets of triple points to define 2 Bezier
+        curves defined over the rhombus A, B, C, D
+        """
+
+        # 4th point of the rhombus
+        D = self.A - self.B + self.C
+        #
+        curve1 = self.get_curve(self.B, self.C, self.A, proportion)
+        curve2 = self.get_curve(D, self.C, self.A, proportion)
+        return curve1, curve2
 
     def conjugate(self):
         """
@@ -330,15 +402,15 @@ class PenroseP3:
         # The tiles' stroke widths scale with ngen
         stroke_width = str(psi ** self.ngen * self.scale *
                            self.config['base-stroke-width'])
-        svg.append('    <g style="stroke:{}; stroke-width: {};'
-                   ' stroke-linejoin: round;" clip-path="none">'
-                   .format(self.config['stroke-colour'], stroke_width))
+        svg.append('    <g stroke-width="{}" stroke-linejoin="round"'
+                   ' clip-path="none">'.format(stroke_width))
         proportion = self.config['proportion']
         draw_rhombuses = self.config['draw-rhombuses']
         normal_arcs = self.config['normal-arcs']
         # Loop over the rhombuses to draw them
         if self.config['draw-tiles']:
-            svg.append('        <g fill-opacity="{}">'.format(self.config['tile-opacity']))
+            svg.append('        <g stroke="{}" fill-opacity="{}">'
+                       .format(self.config['stroke-colour'], self.config['tile-opacity']))
             for e in self.elements:
                 svg.append('            <path fill="{}" d="{}"/>'
                            .format(self.get_tile_colour(e),
@@ -361,3 +433,44 @@ class PenroseP3:
         svg = self.make_svg()
         with open(filename, 'w') as fo:
             fo.write(svg)
+
+    def make_plot(self):
+        """
+        Makes a matplotlib plot
+        """
+
+        # figure dimensions
+        x_min = y_min = -self.scale * self.config['margin']
+        x_max = y_max = self.scale * self.config['margin']
+        line_width = str(psi ** self.ngen * self.scale *
+                         self.config['base-stroke-width'])
+
+        fig, ax = plt.subplots()
+        plt.axis('equal')
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+
+        proportion = self.config['proportion']
+
+        vertices, codes = [], []
+
+        #  Drawing commands
+        codes1 = [
+            Path.MOVETO,
+            Path.CURVE3,
+            Path.CURVE3,
+        ]
+
+        # Iterate over rhombuses of the tiling, calculate
+        # vertices for the paths and extend the collections
+        for e in self.elements:
+            vertices1, vertices2 = e.curves(proportion)
+            vertices += vertices1 + vertices2
+            codes += codes1 + codes1
+
+        # Create the path & patch object with the parameters
+        path = Path(vertices, codes)
+        patch = patches.PathPatch(path, fc='none',
+                                  ec='black', lw=50, capstyle='round')
+        ax.add_patch(patch)
+        plt.show()

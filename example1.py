@@ -1,6 +1,5 @@
 # example1.py
 import math
-import webbrowser
 from penrose import PenroseP3, BtileL, psi
 
 # A simple example starting with a BL tile
@@ -9,8 +8,8 @@ scale = 100
 # Configuration of the tiling
 config = {'draw-arcs': True,
           'normal-arcs': False,
-          'arc-colour': 'brown',
-          'draw-tiles': True,
+          'arc-colour': 'black',
+          'draw-tiles': False,
           'proportion': 0.5}
 tiling = PenroseP3(scale, ngen=5, config=config)
 
@@ -21,9 +20,8 @@ A = -scale/2 + 0j
 B = scale/2 * rot
 C = scale/2 / psi + 0j
 tiling.set_initial_tiles([BtileL(A - B.real, B - B.real, C - B.real)])
+
 # Make the tiles up to ngen generations
 tiling.make_tiling()
 
-# Write and open in a browser the svg file
-tiling.write_svg('pictures/example1.svg')
-webbrowser.open('C:/Users/flynn/PycharmProjects/penrose/pictures/example1.svg')
+tiling.make_plot()
