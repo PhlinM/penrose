@@ -394,6 +394,7 @@ class PenroseP3:
         xmin = ymin = -self.scale * self.config['margin']
         width = height = 2 * self.scale * self.config['margin']
         viewbox = '{} {} {} {}'.format(xmin, ymin, width, height)
+
         svg = ['<?xml version="1.0" encoding="utf-8"?>',
                '<svg width="{}" height="{}" viewBox="{}"'
                ' preserveAspectRatio="xMidYMid meet" version="1.1"'
@@ -404,14 +405,18 @@ class PenroseP3:
                '            <rect x="0" y="0" width="10" height="10" transform="rotate(0)"/>',
                '        </clipPath>',
                '    </defs>']
+
         # The tiles' stroke widths scale with ngen
         stroke_width = str(psi ** self.ngen * self.scale *
                            self.config['base-stroke-width'])
+
         svg.append('    <g stroke-width="{}" stroke-linejoin="round"'
                    ' clip-path="none">'.format(stroke_width))
+
         proportion = self.config['proportion']
         draw_rhombuses = self.config['draw-rhombuses']
         normal_arcs = self.config['normal-arcs']
+
         # Loop over the rhombuses to draw them
         if self.config['draw-tiles']:
             svg.append('        <g stroke="{}" fill-opacity="{}">'
@@ -421,6 +426,7 @@ class PenroseP3:
                            .format(self.get_tile_colour(e),
                                    e.path(rhombus=draw_rhombuses)))
             svg.append('        </g>')
+
         # Loop over the rhombuses to draw the arcs
         if self.config['draw-arcs']:
             svg.append('        <g fill="none" stroke="{}" '
@@ -430,6 +436,7 @@ class PenroseP3:
                 svg.append('            <path d="{}"/>'.format(arc1_d))
                 svg.append('            <path d="{}"/>'.format(arc2_d))
             svg.append('        </g>')
+
         svg.append('    </g>\n</svg>')
         return '\n'.join(svg)
 
@@ -534,3 +541,7 @@ class PenroseP3:
         button.on_clicked(reset)
 
         plt.show()
+
+        # Updates values from slider
+        self.config['proportion'] = s_prop.val
+        self.config['base-stroke-width'] = s_width.val / (psi ** self.ngen * self.scale)
