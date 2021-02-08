@@ -1,6 +1,7 @@
 import math
 import random
 import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider, Button
 from matplotlib.path import Path
 import matplotlib.patches as patches
 
@@ -159,7 +160,11 @@ class RobinsonTriangle:
         # Start of the curve
         start = U + (V - U) * proportion1
         # How far end is from a vertices
-        proportion2 = math.sqrt(phi4 / 4 + proportion1 * (proportion1 + 2 * phi)) - phi2 / 2
+        proportion2 = -phi2 / 2
+        if proportion1 < -2.57:
+            proportion2 += math.sqrt(phi4 / 4 + proportion1 * (proportion1 + 2 * phi))
+        elif proportion1 > -0.666:
+            proportion2 += math.sqrt(phi4 / 4 + proportion1 * (proportion1 + 2 * phi))
 
         if isinstance(self, BtileL):
             # end is on the opposite edge to UV
@@ -389,6 +394,7 @@ class PenroseP3:
         xmin = ymin = -self.scale * self.config['margin']
         width = height = 2 * self.scale * self.config['margin']
         viewbox = '{} {} {} {}'.format(xmin, ymin, width, height)
+
         svg = ['<?xml version="1.0" encoding="utf-8"?>',
                '<svg width="{}" height="{}" viewBox="{}"'
                ' preserveAspectRatio="xMidYMid meet" version="1.1"'
@@ -399,14 +405,18 @@ class PenroseP3:
                '            <rect x="0" y="0" width="10" height="10" transform="rotate(0)"/>',
                '        </clipPath>',
                '    </defs>']
+
         # The tiles' stroke widths scale with ngen
         stroke_width = str(psi ** self.ngen * self.scale *
                            self.config['base-stroke-width'])
+
         svg.append('    <g stroke-width="{}" stroke-linejoin="round"'
                    ' clip-path="none">'.format(stroke_width))
+
         proportion = self.config['proportion']
         draw_rhombuses = self.config['draw-rhombuses']
         normal_arcs = self.config['normal-arcs']
+
         # Loop over the rhombuses to draw them
         if self.config['draw-tiles']:
             svg.append('        <g stroke="{}" fill-opacity="{}">'
@@ -416,6 +426,7 @@ class PenroseP3:
                            .format(self.get_tile_colour(e),
                                    e.path(rhombus=draw_rhombuses)))
             svg.append('        </g>')
+
         # Loop over the rhombuses to draw the arcs
         if self.config['draw-arcs']:
             svg.append('        <g fill="none" stroke="{}" '
@@ -425,6 +436,7 @@ class PenroseP3:
                 svg.append('            <path d="{}"/>'.format(arc1_d))
                 svg.append('            <path d="{}"/>'.format(arc2_d))
             svg.append('        </g>')
+
         svg.append('    </g>\n</svg>')
         return '\n'.join(svg)
 
@@ -434,24 +446,13 @@ class PenroseP3:
         with open(filename, 'w') as fo:
             fo.write(svg)
 
-    def make_plot(self):
+    def make_patch(self, ax, proportion, line_width, colour):
         """
-        Makes a matplotlib plot
+        Makes a matplotlib patch and adds it to ax, part of a figure
         """
 
-        # figure dimensions
-        x_min = y_min = -self.scale * self.config['margin']
-        x_max = y_max = self.scale * self.config['margin']
-        line_width = str(psi ** self.ngen * self.scale *
-                         self.config['base-stroke-width'])
-
-        fig, ax = plt.subplots()
-        plt.axis('equal')
-        ax.set_xlim(x_min, x_max)
-        ax.set_ylim(y_min, y_max)
-
-        proportion = self.config['proportion']
-
+        # Clears old paths
+        ax.patches = []
         vertices, codes = [], []
 
         #  Drawing commands
@@ -470,7 +471,77 @@ class PenroseP3:
 
         # Create the path & patch object with the parameters
         path = Path(vertices, codes)
-        patch = patches.PathPatch(path, fc='none',
-                                  ec='black', lw=50, capstyle='round')
+        patch = patches.PathPatch(path, fc='none', ec=colour,
+                                  lw=line_width, capstyle='round')
         ax.add_patch(patch)
+
+    def make_plot(self):
+        """
+        Creates a matplotlib figure of the pattern with sliders to adjust parameters
+        """
+
+        initial_tiles = self.elements
+        self.make_tiling()
+
+        prop = self.config['proportion']
+        colour = self.config['arc-colour']
+        gen = self.ngen
+
+        # Configure the figure
+        x_min = y_min = -self.scale * self.config['margin']
+        x_max = y_max = self.scale * self.config['margin']
+
+        fig, ax = plt.subplots()
+        plt.subplots_adjust(bottom=0.25)
+        plt.axis('equal')
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+
+        self.make_patch(ax, proportion=prop, line_width=3, colour=colour)
+
+        # Adds sliders to the figure for proportion and line width
+        ax_gen = plt.axes([0.13, 0.05, 0.725, 0.03],
+                          facecolor='beige')
+        ax_prop = plt.axes([0.13, 0.1, 0.725, 0.03],
+                           facecolor='beige')
+        ax_width = plt.axes([0.13, 0.15, 0.725, 0.03],
+                            facecolor='beige')
+
+        s_gen = Slider(ax_gen, 'Generation', 0, 10, valinit=gen, valstep=1)
+        s_prop = Slider(ax_prop, 'Proportion', 0, 2, valinit=prop)
+        s_width = Slider(ax_width, 'Width', 0.1, 10, valinit=3)
+
+        # Updates figure when properties are changed
+        def update1(val):
+            self.ngen = int(s_gen.val)
+            self.set_initial_tiles(initial_tiles)
+            self.make_tiling()
+
+        s_gen.on_changed(update1)
+
+        def update2(val):
+            proportion = s_prop.val
+            width = s_width.val
+            self.make_patch(ax, proportion=proportion, line_width=width, colour=colour)
+            fig.canvas.draw_idle()
+
+        s_gen.on_changed(update2)
+        s_prop.on_changed(update2)
+        s_width.on_changed(update2)
+
+        # Reset button
+        reset_ax = plt.axes([0.8, 0.025, 0.1, 0.04])
+        button = Button(reset_ax, 'Reset', color='beige', hovercolor='0.975')
+
+        def reset(event):
+            s_gen.reset()
+            s_prop.reset()
+            s_width.reset()
+
+        button.on_clicked(reset)
+
         plt.show()
+
+        # Updates values from slider
+        self.config['proportion'] = s_prop.val
+        self.config['base-stroke-width'] = s_width.val / (psi ** self.ngen * self.scale)
