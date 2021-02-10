@@ -5,6 +5,9 @@ from matplotlib.widgets import Slider, Button
 from matplotlib.path import Path
 import matplotlib.patches as patches
 
+'''
+Some maths constants used throughout the code below
+'''
 # A small tolerance for comparing floats for equality
 TOL = 1.e-5
 # psi = 1/phi where phi is the Golden ratio, sqrt(5)+1)/2
@@ -17,6 +20,7 @@ phi4 = 3*phi + 2
 psi2 = 1 - psi
 
 
+# Used when finding the control points for the Bezier curves for RobinsonTriangles
 def intersection(start, end, centre):
     """
     Finds the intersection point from between the two tangents
@@ -45,8 +49,7 @@ def intersection(start, end, centre):
 
 class RobinsonTriangle:
     """
-    A class representing a Robinson triangle and the rhombus formed from it.f
-
+    A class representing a Robinson triangle and the rhombus formed from it.
     """
 
     def __init__(self, A, B, C):
@@ -67,6 +70,7 @@ class RobinsonTriangle:
 
         return (self.A + self.C) / 2
 
+    # A method for an SVG format for drawing a tile used to draw all of them in make_svg
     def path(self, rhombus=True):
         """
         Return the SVG "d" path element specifier for the rhombus formed
@@ -81,29 +85,22 @@ class RobinsonTriangle:
             return 'm{},{} l{},{} l{},{} l{},{}z'.format(*xy(self.A) + xy(AB) + xy(BC) + xy(-AB))
         return 'm{},{} l{},{} l{},{}z'.format(*xy(self.A) + xy(AB) + xy(BC))
 
-    def get_arc_d(self, U, V, W, proportion1=0.5, half_arc=False, normal_arcs=True):
+    # The below two methods are used to get SVG commands for the
+    # pattern that overlays the penrose tiling, using sections of circular arcs
+    def get_arc_d(self, U, V, W, proportion1=0.5):
         """
         Return the SVG "d" path element specifier for the circular arc between
         start and end, with a radius related to proportion.
-        If normal_arcs is True then proportion is 0.5 also if half_arc is True,
-        the arc is at the vertex of a rhombus; if half_arc is False, the arc is
-        drawn for the corresponding vertices of a Robinson triangle.
-
-        If normal_arcs is False then
+        Needs commenting
         """
 
-        if normal_arcs:
-            # centre is at vertex U
-            centre = U
-            proportion2 = proportion1
-        else:
-            # centre is along the line UV with a ratio phi
-            centre = U + (U - V) * phi
-            proportion2 = math.sqrt(phi4 / 4 + proportion1 * (proportion1 + 2 * phi)) - phi2 / 2
+        # centre is along the line UV with a ratio phi
+        centre = U + (U - V) * phi
+        proportion2 = math.sqrt(phi4 / 4 + proportion1 * (proportion1 + 2 * phi)) - phi2 / 2
 
         # start in on UV
         start = U + (V - U) * proportion1
-        if isinstance(self, BtileL) and not normal_arcs:
+        if isinstance(self, BtileL):
             # end is on the opposite edge to UV
             end = W + (V - U) * proportion2
         else:
@@ -111,12 +108,6 @@ class RobinsonTriangle:
             end = U + (W - U) * proportion2
         # arc radius
         r = abs(centre - start)
-
-        if half_arc:
-            # Find the endpoint of the "half-arc" terminating on the triangle
-            # base
-            UN = V + W - 2 * U
-            end = U + r * UN / abs(UN)
 
         # ensure we draw the arc for the angular component < 180 deg
         cross = lambda u, v: u.real * v.imag - u.imag * v.real
@@ -126,29 +117,22 @@ class RobinsonTriangle:
         return 'M {} {} A {} {} 0 0 0 {} {}'.format(start.real, start.imag,
                                                     r, r, end.real, end.imag)
 
-    def arcs(self, proportion=0.5, half_arc=False, normal_arcs=True):
+    def arcs(self, proportion=0.5):
         """
-        Return the SVG "d" path element specifiers for the two circular arcs
-        about vertices A and C. If half_arc is True, the arc is at the vertex
-        of a rhombus; if half_arc is False, the arc is drawn for the
-        corresponding vertices of a Robinson triangle.
-
+        Return the SVG "d" path element specifiers for the two circular
+        arcs that trace over the rhombus defined over a RobinsonTriangle
         """
 
+        # 4th point of the rhombus defined from a RobinsonTriangle
         D = self.A - self.B + self.C
-        if normal_arcs:
-            arc1_d = self.get_arc_d(self.A, self.B, D, 0.5, half_arc, normal_arcs)
-            arc2_d = self.get_arc_d(self.C, self.B, D, 0.5, half_arc, normal_arcs)
-        elif isinstance(self, BtileS):
-            arc1_d = self.get_arc_d(self.B, self.C, self.A, proportion, half_arc, normal_arcs)
-            arc2_d = self.get_arc_d(D, self.C, self.A, proportion, half_arc, normal_arcs)
-        elif isinstance(self, BtileL):
-            arc1_d = self.get_arc_d(self.B, self.C, self.A, proportion, half_arc, normal_arcs)
-            arc2_d = self.get_arc_d(D, self.C, self.A, proportion, half_arc, normal_arcs)
-        else:
-            raise ValueError
+
+        arc1_d = self.get_arc_d(self.B, self.C, self.A, proportion)
+        arc2_d = self.get_arc_d(D, self.C, self.A, proportion)
+
         return arc1_d, arc2_d
 
+    # The below two methods are used to get Matplotlib commands for the
+    # pattern that overlays the penrose tiling, using Bezier curves
     def get_curve(self, U, V, W, proportion1):
         """
         Takes 3 vertices of a rhombus and calculates the start, control
@@ -207,6 +191,8 @@ class RobinsonTriangle:
                               self.C.conjugate())
 
 
+# The below 2 subclasses are the two different fundamental tiles in the penrose tiling.
+# They only contain the two different inflation methods each have
 class BtileL(RobinsonTriangle):
     """
     A class representing a "B_L" Penrose tile in the P3 tiling scheme as
@@ -278,7 +264,6 @@ class PenroseP3:
                        'draw-tiles': True,
                        'draw-arcs': False,
                        'proportion': 0.7,
-                       'normal-arcs': True,
                        'reflect-x': True,
                        'draw-rhombuses': True,
                        'rotate': 0,
@@ -388,6 +373,8 @@ class PenroseP3:
             return self.config['Stile-colour'](e)
         return self.config['Stile-colour']
 
+    # make_svg and writ_svg are methods that creates and save an
+    # SVG style picture from a generated tiling,
     def make_svg(self):
         """ Make and return the SVG for the tiling as a str. """
 
@@ -415,7 +402,6 @@ class PenroseP3:
 
         proportion = self.config['proportion']
         draw_rhombuses = self.config['draw-rhombuses']
-        normal_arcs = self.config['normal-arcs']
 
         # Loop over the rhombuses to draw them
         if self.config['draw-tiles']:
@@ -432,7 +418,7 @@ class PenroseP3:
             svg.append('        <g fill="none" stroke="{}" '
                        'stroke-linecap="round">'.format(self.config['arc-colour']))
             for e in self.elements:
-                arc1_d, arc2_d = e.arcs(proportion, half_arc=not draw_rhombuses, normal_arcs=normal_arcs)
+                arc1_d, arc2_d = e.arcs(proportion)
                 svg.append('            <path d="{}"/>'.format(arc1_d))
                 svg.append('            <path d="{}"/>'.format(arc2_d))
             svg.append('        </g>')
@@ -446,6 +432,8 @@ class PenroseP3:
         with open(filename, 'w') as fo:
             fo.write(svg)
 
+    # The below two methods are used to create a matplotlib plot,
+    # great for playing with the variables, and finding nice patterns
     def make_patch(self, ax, proportion, line_width, colour):
         """
         Makes a matplotlib patch and adds it to ax, part of a figure
@@ -497,7 +485,8 @@ class PenroseP3:
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
 
-        self.make_patch(ax, proportion=prop, line_width=3, colour=colour)
+        self.make_patch(ax, proportion=prop,
+                        line_width=3, colour=colour)
 
         # Adds sliders to the figure for proportion and line width
         ax_gen = plt.axes([0.13, 0.05, 0.725, 0.03],
@@ -507,9 +496,12 @@ class PenroseP3:
         ax_width = plt.axes([0.13, 0.15, 0.725, 0.03],
                             facecolor='beige')
 
-        s_gen = Slider(ax_gen, 'Generation', 0, 10, valinit=gen, valstep=1)
-        s_prop = Slider(ax_prop, 'Proportion', 0, 2, valinit=prop)
-        s_width = Slider(ax_width, 'Width', 0.1, 10, valinit=3)
+        s_gen = Slider(ax_gen, 'Generation', 0, 10,
+                       valinit=gen, valstep=1)
+        s_prop = Slider(ax_prop, 'Proportion', -0.666, 2,
+                        valinit=prop)
+        s_width = Slider(ax_width, 'Width', 0.1, 10,
+                         valinit=3)
 
         # Updates figure when properties are changed
         def update1(val):
@@ -522,7 +514,8 @@ class PenroseP3:
         def update2(val):
             proportion = s_prop.val
             width = s_width.val
-            self.make_patch(ax, proportion=proportion, line_width=width, colour=colour)
+            self.make_patch(ax, proportion=proportion,
+                            line_width=width, colour=colour)
             fig.canvas.draw_idle()
 
         s_gen.on_changed(update2)
@@ -531,7 +524,8 @@ class PenroseP3:
 
         # Reset button
         reset_ax = plt.axes([0.8, 0.025, 0.1, 0.04])
-        button = Button(reset_ax, 'Reset', color='beige', hovercolor='0.975')
+        button = Button(reset_ax, 'Reset', color='beige',
+                        hovercolor='0.975')
 
         def reset(event):
             s_gen.reset()
