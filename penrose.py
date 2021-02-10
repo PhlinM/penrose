@@ -87,63 +87,21 @@ class RobinsonTriangle:
 
     # The below two methods are used to get SVG commands for the
     # pattern that overlays the penrose tiling, using sections of circular arcs
-    def get_arc_d(self, U, V, W, proportion1=0.5):
+    def get_arc(self, U, V, W, proportion1=0.5):
         """
-        Return the SVG "d" path element specifier for the circular arc between
-        start and end, with a radius related to proportion.
-        Needs commenting
-        """
-
-        # centre is along the line UV with a ratio phi
-        centre = U + (U - V) * phi
-        proportion2 = math.sqrt(phi4 / 4 + proportion1 * (proportion1 + 2 * phi)) - phi2 / 2
-
-        # start in on UV
-        start = U + (V - U) * proportion1
-        if isinstance(self, BtileL):
-            # end is on the opposite edge to UV
-            end = W + (V - U) * proportion2
-        else:
-            # end is on UW
-            end = U + (W - U) * proportion2
-        # arc radius
-        r = abs(centre - start)
-
-        # ensure we draw the arc for the angular component < 180 deg
-        cross = lambda u, v: u.real * v.imag - u.imag * v.real
-        US, UE = start - centre, end - centre
-        if cross(US, UE) > 0:
-            start, end = end, start
-        return 'M {} {} A {} {} 0 0 0 {} {}'.format(start.real, start.imag,
-                                                    r, r, end.real, end.imag)
-
-    def arcs(self, proportion=0.5):
-        """
-        Return the SVG "d" path element specifiers for the two circular
-        arcs that trace over the rhombus defined over a RobinsonTriangle
-        """
-
-        # 4th point of the rhombus defined from a RobinsonTriangle
-        D = self.A - self.B + self.C
-
-        arc1_d = self.get_arc_d(self.B, self.C, self.A, proportion)
-        arc2_d = self.get_arc_d(D, self.C, self.A, proportion)
-
-        return arc1_d, arc2_d
-
-    # The below two methods are used to get Matplotlib commands for the
-    # pattern that overlays the penrose tiling, using Bezier curves
-    def get_curve(self, U, V, W, proportion1):
-        """
-        Takes 3 vertices of a rhombus and calculates the start, control
-        and end points for a quadratic bezier curve
+        Returns 4 values: radius, start, control point, end.
+        These define the circular arc between start and end, with
+        a radius related to proportion1. The control point the
+        middle point for the Bezier curve that defines the same arc.
         """
 
         # Centre of the circle
         centre = U + (U - V) * phi
         # Start of the curve
         start = U + (V - U) * proportion1
-        # How far end is from a vertices
+        # arc radius
+        radius = abs(centre - start)
+        # How far end is from a vertex U or W
         proportion2 = -phi2 / 2
         if proportion1 < -2.57:
             proportion2 += math.sqrt(phi4 / 4 + proportion1 * (proportion1 + 2 * phi))
@@ -157,9 +115,16 @@ class RobinsonTriangle:
             # end is on UW
             end = U + (W - U) * proportion2
 
+        # ensure we draw the arc for the angular component < 180 deg
+        cross = lambda u, v: u.real * v.imag - u.imag * v.real
+        US, UE = start - centre, end - centre
+        if cross(US, UE) > 0:
+            start, end = end, start
+
         control = intersection(start, end, centre)
 
         vertices = [
+            radius,                        # Radius
             (start.real, start.imag),      # Start
             (control.real, control.imag),  # Control point
             (end.real, end.imag)           # End
@@ -167,18 +132,19 @@ class RobinsonTriangle:
 
         return vertices
 
-    def curves(self, proportion):
+    def arcs(self, proportion=0.5):
         """
-        Finds 2 sets of triple points to define 2 Bezier
-        curves defined over the rhombus A, B, C, D
+        Return the 4 values that specifies the two circular arcs that
+        trace over the rhombus defined over a RobinsonTriangle
         """
 
-        # 4th point of the rhombus
+        # 4th point of the rhombus defined from a RobinsonTriangle
         D = self.A - self.B + self.C
-        #
-        curve1 = self.get_curve(self.B, self.C, self.A, proportion)
-        curve2 = self.get_curve(D, self.C, self.A, proportion)
-        return curve1, curve2
+
+        arc1 = self.get_arc(self.B, self.C, self.A, proportion)
+        arc2 = self.get_arc(D, self.C, self.A, proportion)
+
+        return arc1, arc2
 
     def conjugate(self):
         """
@@ -267,16 +233,17 @@ class PenroseP3:
                        'reflect-x': True,
                        'draw-rhombuses': True,
                        'rotate': 0,
-                       'flip-y': False, 'flip-x': False,
-                       }
+                       'flip-y': False, 'flip-x': False}
         self.config.update(config)
         # And ensure width, height values are strings for the SVG
         self.config['width'] = str(self.config['width'])
         self.config['height'] = str(self.config['height'])
 
+        self.initial_tiles = []
         self.elements = []
 
     def set_initial_tiles(self, tiles):
+        self.initial_tiles = tiles
         self.elements = tiles
 
     def inflate(self):
@@ -295,7 +262,8 @@ class PenroseP3:
 
         # Triangles give rise to identical rhombuses if these rhombuses have
         # the same centre.
-        sort_elements = sorted(self.elements, key=lambda e: (e.centre().real, e.centre().imag))
+        sort_elements = sorted(self.elements,
+                               key=lambda e: (e.centre().real, e.centre().imag))
         self.elements = [sort_elements[0]]
         for i, element in enumerate(sort_elements[1:], start=1):
             if abs(element.centre() - sort_elements[i - 1].centre()) > TOL:
@@ -418,9 +386,12 @@ class PenroseP3:
             svg.append('        <g fill="none" stroke="{}" '
                        'stroke-linecap="round">'.format(self.config['arc-colour']))
             for e in self.elements:
-                arc1_d, arc2_d = e.arcs(proportion)
-                svg.append('            <path d="{}"/>'.format(arc1_d))
-                svg.append('            <path d="{}"/>'.format(arc2_d))
+                for curve in e.arcs(proportion):
+                    s = 'M {} {} A {} {} 0 0 0 {} {}'.format(curve[1][0], curve[1][1],
+                                                             curve[0], curve[0],
+                                                             curve[3][0], curve[3][1])
+                    svg.append('            <path d="{}"/>'.format(s))
+
             svg.append('        </g>')
 
         svg.append('    </g>\n</svg>')
@@ -453,22 +424,22 @@ class PenroseP3:
         # Iterate over rhombuses of the tiling, calculate
         # vertices for the paths and extend the collections
         for e in self.elements:
-            vertices1, vertices2 = e.curves(proportion)
-            vertices += vertices1 + vertices2
-            codes += codes1 + codes1
+            for curve in e.arcs(proportion):
+                vertices += curve[1:]
+                codes += codes1
 
         # Create the path & patch object with the parameters
         path = Path(vertices, codes)
-        patch = patches.PathPatch(path, fc='none', ec=colour,
-                                  lw=line_width, capstyle='round')
-        ax.add_patch(patch)
+        return patches.PathPatch(path, fc='none', ec=colour,
+                                 lw=line_width, capstyle='round')
 
     def make_plot(self):
         """
-        Creates a matplotlib figure of the pattern with sliders to adjust parameters
+        Creates a matplotlib figure of the pattern with sliders
+        to adjust parameters. Updates the class properties when
+        the plot is closed
         """
 
-        initial_tiles = self.elements
         self.make_tiling()
 
         prop = self.config['proportion']
@@ -485,10 +456,10 @@ class PenroseP3:
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
 
-        self.make_patch(ax, proportion=prop,
-                        line_width=3, colour=colour)
+        ax.add_patch(self.make_patch(ax, proportion=prop,
+                                     line_width=3, colour=colour))
 
-        # Adds sliders to the figure for proportion and line width
+        # Adds sliders to the figure for generation, proportion and line width
         ax_gen = plt.axes([0.13, 0.05, 0.725, 0.03],
                           facecolor='beige')
         ax_prop = plt.axes([0.13, 0.1, 0.725, 0.03],
@@ -505,17 +476,19 @@ class PenroseP3:
 
         # Updates figure when properties are changed
         def update1(val):
+            """ Remakes the tiling when ngen changes """
             self.ngen = int(s_gen.val)
-            self.set_initial_tiles(initial_tiles)
+            self.set_initial_tiles(self.initial_tiles)
             self.make_tiling()
 
         s_gen.on_changed(update1)
 
         def update2(val):
+            """ Recalculates the paths making use of make_patch """
             proportion = s_prop.val
             width = s_width.val
-            self.make_patch(ax, proportion=proportion,
-                            line_width=width, colour=colour)
+            ax.add_patch(self.make_patch(ax, proportion=proportion,
+                                         line_width=width, colour=colour))
             fig.canvas.draw_idle()
 
         s_gen.on_changed(update2)

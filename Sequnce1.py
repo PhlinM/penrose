@@ -11,7 +11,6 @@ from penrose import PenroseP3, BtileL, psi
 scale = 100
 # Configuration of the tiling
 config = {'draw-arcs': True,
-          'normal-arcs': False,
           'arc-colour': '#000',
           'draw-tiles': True}
 tiling = PenroseP3(scale, ngen=0, config=config)
