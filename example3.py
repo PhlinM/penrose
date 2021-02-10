@@ -15,7 +15,7 @@ config = {'draw-arcs': True,
           'Stile-colour': '#090',
           'Ltile-colour': '#9f3',
           'rotate': math.pi/2}
-tiling = PenroseP3(scale*2, ngen=0, config=config)
+tiling = PenroseP3(scale*2, ngen=1, config=config)
 
 # Create the initial tiles, a triangle
 theta = 2*math.pi / 5
@@ -33,7 +33,8 @@ B = [scale, p, p, q, q]
 C = [s, s, r, r, C5]
 
 tiling.set_initial_tiles([BtileL(*v) for v in zip(A, B, C)])
-tiling.make_tiling()
+
+tiling.make_plot()
 
 tiling.write_svg('pictures/example3.svg')
 webbrowser.open('C:/Users/flynn/PycharmProjects/penrose/pictures/example3.svg')

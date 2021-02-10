@@ -12,7 +12,6 @@ scale = 100
 theta = math.pi / 5
 # Configuration of the tiling
 config = {'draw-arcs': True,
-          'normal-arcs': False,
           'arc-colour': '#000',
           'draw-tiles': True,
           'reflect-x': False,

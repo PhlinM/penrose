@@ -8,13 +8,12 @@ from penrose import PenroseP3, BtileS
 scale = 100
 # Configuration of the tiling
 config = {'draw-arcs': True,
-          'normal-arcs': False,
-          'base-stroke-width': 0.3,
+          'base-stroke-width': 0.1,
           'arc-colour': '#000',
           'draw-tiles': False,
           'random-tile-colours': True,
           'tile-opacity': 0.6,
-          'proportion': 0.7}
+          'proportion': 0.2}
 tiling = PenroseP3(scale, ngen=7, config=config)
 
 # Create the initial tiles, a triangle
@@ -31,6 +30,9 @@ C5 = -A1
 tiling.set_initial_tiles([BtileS(A1, B, C1), BtileS(A2, B, C2),
                           BtileS(A3, B, C3), BtileS(A4, B, C4),
                           BtileS(A5, B, C5)])
-tiling.make_tiling()
+
+# Makes the matplotlib figure
+tiling.make_plot()
+
 tiling.write_svg('pictures/example2.svg')
 webbrowser.open('C:/Users/flynn/PycharmProjects/penrose/pictures/example2.svg')

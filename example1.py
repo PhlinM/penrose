@@ -7,7 +7,6 @@ from penrose import PenroseP3, BtileL, psi
 scale = 100
 # Configuration of the tiling
 config = {'draw-arcs': True,
-          'normal-arcs': False,
           'arc-colour': 'black',
           'draw-tiles': False,
           'proportion': 0.5}
@@ -23,6 +22,7 @@ tiling.set_initial_tiles([BtileL(A - B.real, B - B.real, C - B.real)])
 
 # Makes the matplotlib figure
 tiling.make_plot()
+
 
 stroke_width = str(psi ** tiling.ngen * tiling.scale *
                    tiling.config['base-stroke-width'])
