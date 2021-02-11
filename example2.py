@@ -30,6 +30,7 @@ C5 = -A1
 tiling.set_initial_tiles([BtileS(A1, B, C1), BtileS(A2, B, C2),
                           BtileS(A3, B, C3), BtileS(A4, B, C4),
                           BtileS(A5, B, C5)])
+tiling.make_tiling()
 
 # Makes the matplotlib figure
 tiling.make_plot()

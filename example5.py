@@ -18,6 +18,7 @@ A = -scale/2 + 0j
 B = scale/2 * rot
 C = scale/2 / psi + 0j
 tiling.set_initial_tiles([BtileL(A - B.real, B - B.real, C - B.real)])
+tiling.make_tiling()
 tiling.make_plot()
 
 tiling.write_svg('pictures/example5.svg')

@@ -33,6 +33,7 @@ B = [scale, p, p, q, q]
 C = [s, s, r, r, C5]
 
 tiling.set_initial_tiles([BtileL(*v) for v in zip(A, B, C)])
+tiling.make_tiling()
 
 tiling.make_plot()
 

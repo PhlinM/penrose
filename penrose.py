@@ -81,9 +81,7 @@ class RobinsonTriangle:
 
         AB, BC = self.B - self.A, self.C - self.B
         xy = lambda v: (v.real, v.imag)
-        if rhombus:
-            return 'm{},{} l{},{} l{},{} l{},{}z'.format(*xy(self.A) + xy(AB) + xy(BC) + xy(-AB))
-        return 'm{},{} l{},{} l{},{}z'.format(*xy(self.A) + xy(AB) + xy(BC))
+        return 'm{},{} l{},{} l{},{} l{},{}z'.format(*xy(self.A) + xy(AB) + xy(BC) + xy(-AB))
 
     # The below two methods are used to get SVG commands for the
     # pattern that overlays the penrose tiling, using sections of circular arcs
@@ -231,7 +229,6 @@ class PenroseP3:
                        'draw-arcs': False,
                        'proportion': 0.7,
                        'reflect-x': True,
-                       'draw-rhombuses': True,
                        'rotate': 0,
                        'flip-y': False, 'flip-x': False}
         self.config.update(config)
@@ -304,8 +301,8 @@ class PenroseP3:
 
         for gen in range(self.ngen):
             self.inflate()
-        if self.config['draw-rhombuses']:
-            self.remove_dupes()
+
+        self.remove_dupes()
         if self.config['reflect-x']:
             self.add_conjugate_elements()
             self.remove_dupes()
@@ -369,7 +366,6 @@ class PenroseP3:
                    ' clip-path="none">'.format(stroke_width))
 
         proportion = self.config['proportion']
-        draw_rhombuses = self.config['draw-rhombuses']
 
         # Loop over the rhombuses to draw them
         if self.config['draw-tiles']:
@@ -378,7 +374,7 @@ class PenroseP3:
             for e in self.elements:
                 svg.append('            <path fill="{}" d="{}"/>'
                            .format(self.get_tile_colour(e),
-                                   e.path(rhombus=draw_rhombuses)))
+                                   e.path()))
             svg.append('        </g>')
 
         # Loop over the rhombuses to draw the arcs
@@ -405,13 +401,11 @@ class PenroseP3:
 
     # The below two methods are used to create a matplotlib plot,
     # great for playing with the variables, and finding nice patterns
-    def make_patch(self, ax, proportion, line_width, colour):
+    def make_patch(self, proportion, width, colour):
         """
-        Makes a matplotlib patch and adds it to ax, part of a figure
+        Makes a matplotlib patch
         """
 
-        # Clears old paths
-        ax.patches = []
         vertices, codes = [], []
 
         #  Drawing commands
@@ -431,7 +425,7 @@ class PenroseP3:
         # Create the path & patch object with the parameters
         path = Path(vertices, codes)
         return patches.PathPatch(path, fc='none', ec=colour,
-                                 lw=line_width, capstyle='round')
+                                 lw=width, capstyle='round')
 
     def make_plot(self):
         """
@@ -440,72 +434,93 @@ class PenroseP3:
         the plot is closed
         """
 
-        self.make_tiling()
-
         prop = self.config['proportion']
         colour = self.config['arc-colour']
-        gen = self.ngen
 
         # Configure the figure
-        x_min = y_min = -self.scale * self.config['margin']
-        x_max = y_max = self.scale * self.config['margin']
+        x_min = y_min = -self.scale
+        x_max = y_max = self.scale
 
-        fig, ax = plt.subplots()
-        plt.subplots_adjust(bottom=0.25)
+        fig, ax = plt.subplots(figsize=(7, 6))
+        plt.subplots_adjust(left=0, right=1, top=1, bottom=0.20)
         plt.axis('equal')
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
+        ax.axis('off')
 
-        ax.add_patch(self.make_patch(ax, proportion=prop,
-                                     line_width=3, colour=colour))
+        # Inflate button
+        ax_next = plt.axes([0.26, 0.025, 0.1, 0.05])
+        b_next = Button(ax_next, 'Inflate', color='beige',
+                        hovercolor='0.975')
 
-        # Adds sliders to the figure for generation, proportion and line width
-        ax_gen = plt.axes([0.13, 0.05, 0.725, 0.03],
-                          facecolor='beige')
+        def ngen_next(event):
+            if self.ngen == 10:
+                return
+            self.ngen += 1
+
+        b_next.on_clicked(ngen_next)
+
+        # Deflate button
+        ax_prev = plt.axes([0.13, 0.025, 0.1, 0.05])
+        b_prev = Button(ax_prev, 'Deflate', color='beige',
+                        hovercolor='0.975')
+
+        def ngen_prev(event):
+            if self.ngen == 0:
+                return
+            self.ngen -= 1
+
+        b_prev.on_clicked(ngen_prev)
+
+        # Updates figure when properties are changed
+        def change_tiling(event):
+            """ Remakes the tiling when ngen changes """
+            self.elements = self.initial_tiles
+            self.make_tiling()
+
+        b_next.on_clicked(change_tiling)
+        b_prev.on_clicked(change_tiling)
+
+        # Adds sliders to the figure for proportion and line width
         ax_prop = plt.axes([0.13, 0.1, 0.725, 0.03],
                            facecolor='beige')
         ax_width = plt.axes([0.13, 0.15, 0.725, 0.03],
                             facecolor='beige')
 
-        s_gen = Slider(ax_gen, 'Generation', 0, 10,
-                       valinit=gen, valstep=1)
         s_prop = Slider(ax_prop, 'Proportion', -0.666, 2,
                         valinit=prop)
         s_width = Slider(ax_width, 'Width', 0.1, 10,
                          valinit=3)
 
         # Updates figure when properties are changed
-        def update1(val):
-            """ Remakes the tiling when ngen changes """
-            self.ngen = int(s_gen.val)
-            self.set_initial_tiles(self.initial_tiles)
-            self.make_tiling()
-
-        s_gen.on_changed(update1)
-
-        def update2(val):
+        def update(val):
             """ Recalculates the paths making use of make_patch """
             proportion = s_prop.val
             width = s_width.val
-            ax.add_patch(self.make_patch(ax, proportion=proportion,
-                                         line_width=width, colour=colour))
-            fig.canvas.draw_idle()
+            # Clears old patches
+            ax.patches = []
+            ax.add_patch(self.make_patch(proportion=proportion,
+                                         width=width, colour=colour))
 
-        s_gen.on_changed(update2)
-        s_prop.on_changed(update2)
-        s_width.on_changed(update2)
+        s_prop.on_changed(update)
+        s_width.on_changed(update)
+        b_next.on_clicked(update)
+        b_prev.on_clicked(update)
 
         # Reset button
-        reset_ax = plt.axes([0.8, 0.025, 0.1, 0.04])
+        reset_ax = plt.axes([0.8, 0.025, 0.1, 0.05])
         button = Button(reset_ax, 'Reset', color='beige',
                         hovercolor='0.975')
 
         def reset(event):
-            s_gen.reset()
+            self.ngen = 5
             s_prop.reset()
             s_width.reset()
 
         button.on_clicked(reset)
+
+        ax.add_patch(self.make_patch(proportion=prop,
+                                     width=3, colour=colour))
 
         plt.show()
 
