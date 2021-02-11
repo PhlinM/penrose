@@ -71,7 +71,7 @@ class RobinsonTriangle:
         return (self.A + self.C) / 2
 
     # A method for an SVG format for drawing a tile used to draw all of them in make_svg
-    def path(self, rhombus=True):
+    def path(self):
         """
         Return the SVG "d" path element specifier for the rhombus formed
         by this triangle and its mirror image joined along their bases. If
@@ -412,7 +412,7 @@ class PenroseP3:
         codes1 = [
             Path.MOVETO,
             Path.CURVE3,
-            Path.CURVE3,
+            Path.CURVE3
         ]
 
         # Iterate over rhombuses of the tiling, calculate
@@ -477,6 +477,10 @@ class PenroseP3:
             """ Remakes the tiling when ngen changes """
             self.elements = self.initial_tiles
             self.make_tiling()
+            ax.axes.texts = []
+            ax.annotate('Generation: {}'.format(self.ngen),
+                        xy=(0.4, 0.025), xycoords='figure fraction',
+                        fontsize=15)
 
         b_next.on_clicked(change_tiling)
         b_prev.on_clicked(change_tiling)
@@ -521,6 +525,10 @@ class PenroseP3:
 
         ax.add_patch(self.make_patch(proportion=prop,
                                      width=3, colour=colour))
+
+        ax.annotate('Generation: {}'.format(self.ngen),
+                    xy=(0.4, 0.025), xycoords='figure fraction',
+                    fontsize=15)
 
         plt.show()
 
