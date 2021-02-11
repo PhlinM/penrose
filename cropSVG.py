@@ -3,13 +3,13 @@ Changes the properties of a SVG, such as different
 stroke thickness or cropping
 """
 # Name of the picture to be edited within the directory pictures/
-file = 'example2.svg'
+file = 'example1.svg'
 
 # Cropping rectangle configuration
-x_pos, y_pos, angle, ratio, scale = -20, -13.5, 7, 0.3, 90
-thickness = 1
+x_pos, y_pos, angle, ratio, scale = -40, -13.5, 0, 0.3, 90
+thickness = 0.5
 
-margin = scale*0.02
+margin = scale*0
 height = ratio * scale
 viewBox = '{} {} {} {}'.format(x_pos - margin, y_pos - margin,
                                scale + 2*margin, height + 2*margin)
@@ -22,7 +22,7 @@ picture.close()
 # Replace the relevant lines with new configuration
 svg_element_list[1] = '<svg width="{}" height="{}" viewBox="{}" ' \
                       'preserveAspectRatio="xMidYMid meet" version="1.1" baseProfile="full"' \
-                      ' xmlns="http://www.w3.org/2000/svg">'.format(scale + 2*margin, height + 2*margin, viewBox)
+                      ' xmlns="http://www.w3.org/2000/svg">\n'.format(1024, 1024 * ratio, viewBox)
 svg_element_list[4] = '            <rect x="{}" y="{}"' \
                       ' width="{}" height="{}" transform=' \
                       '"rotate({})"/>\n'.format(x_pos, y_pos, scale, height, angle)
