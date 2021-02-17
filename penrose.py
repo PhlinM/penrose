@@ -1,7 +1,7 @@
 import math
 import random
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider, Button
+from matplotlib.widgets import Slider, Button, TextBox
 from matplotlib.path import Path
 import matplotlib.patches as patches
 
@@ -71,7 +71,7 @@ class RobinsonTriangle:
         return (self.A + self.C) / 2
 
     # A method for an SVG format for drawing a tile used to draw all of them in make_svg
-    def path(self, rhombus=True):
+    def path(self):
         """
         Return the SVG "d" path element specifier for the rhombus formed
         by this triangle and its mirror image joined along their bases. If
@@ -238,6 +238,8 @@ class PenroseP3:
 
         self.initial_tiles = []
         self.elements = []
+
+        self.crop = False
 
     def set_initial_tiles(self, tiles):
         self.initial_tiles = tiles
@@ -412,7 +414,7 @@ class PenroseP3:
         codes1 = [
             Path.MOVETO,
             Path.CURVE3,
-            Path.CURVE3,
+            Path.CURVE3
         ]
 
         # Iterate over rhombuses of the tiling, calculate
@@ -427,7 +429,7 @@ class PenroseP3:
         return patches.PathPatch(path, fc='none', ec=colour,
                                  lw=width, capstyle='round')
 
-    def make_plot(self):
+    def make_plot(self, x_pos=0, y_pos=0, angle=0, ratio=0.3, scale=90):
         """
         Creates a matplotlib figure of the pattern with sliders
         to adjust parameters. Updates the class properties when
@@ -437,7 +439,7 @@ class PenroseP3:
         prop = self.config['proportion']
         colour = self.config['arc-colour']
 
-        # Configure the figure
+        # Configure the figure: setting axis limits and positioning
         x_min = y_min = -self.scale
         x_max = y_max = self.scale
 
@@ -448,20 +450,28 @@ class PenroseP3:
         ax.set_ylim(y_min, y_max)
         ax.axis('off')
 
-        # Inflate button
-        ax_next = plt.axes([0.26, 0.025, 0.1, 0.05])
-        b_next = Button(ax_next, 'Inflate', color='beige',
-                        hovercolor='0.975')
+        # Toggle crop buttons
+        rax = plt.axes([0.03, 0.01, 0.1, 0.04])
+        Crop = Button(rax, 'Crop', color='beige', hovercolor='0.975')
+        # The path that crops the picture
+        rectangle = patches.Rectangle((x_pos, y_pos), width=scale,
+                                      height=scale * ratio, angle=angle,
+                                      transform=ax.transData)
 
-        def ngen_next(event):
-            if self.ngen == 10:
-                return
-            self.ngen += 1
+        def crop_toggle(event):
+            '''Toggles crop and changes axis limits'''
+            self.crop = not self.crop
+            if self.crop:
+                ax.set_xlim(x_pos, x_pos + scale)
+                ax.set_ylim(y_pos, y_pos + scale * ratio)
+            else:
+                ax.set_xlim(x_min, x_max)
+                ax.set_ylim(y_min, y_max)
 
-        b_next.on_clicked(ngen_next)
+        Crop.on_clicked(crop_toggle)
 
         # Deflate button
-        ax_prev = plt.axes([0.13, 0.025, 0.1, 0.05])
+        ax_prev = plt.axes([0.16, 0.01, 0.1, 0.04])
         b_prev = Button(ax_prev, 'Deflate', color='beige',
                         hovercolor='0.975')
 
@@ -472,23 +482,39 @@ class PenroseP3:
 
         b_prev.on_clicked(ngen_prev)
 
+        # Inflate button
+        ax_next = plt.axes([0.29, 0.01, 0.1, 0.04])
+        b_next = Button(ax_next, 'Inflate', color='beige',
+                        hovercolor='0.975')
+
+        def ngen_next(event):
+            if self.ngen == 10:
+                return
+            self.ngen += 1
+
+        b_next.on_clicked(ngen_next)
+
         # Updates figure when properties are changed
         def change_tiling(event):
             """ Remakes the tiling when ngen changes """
             self.elements = self.initial_tiles
             self.make_tiling()
+            ax.axes.texts = []
+            ax.annotate('Generation: {}'.format(self.ngen),
+                        xy=(0.4, 0.025), xycoords='figure fraction',
+                        fontsize=15)
 
         b_next.on_clicked(change_tiling)
         b_prev.on_clicked(change_tiling)
 
         # Adds sliders to the figure for proportion and line width
-        ax_prop = plt.axes([0.13, 0.1, 0.725, 0.03],
+        ax_prop = plt.axes([0.13, 0.06, 0.725, 0.04],
                            facecolor='beige')
-        ax_width = plt.axes([0.13, 0.15, 0.725, 0.03],
+        ax_width = plt.axes([0.13, 0.11, 0.725, 0.04],
                             facecolor='beige')
 
-        s_prop = Slider(ax_prop, 'Proportion', -0.666, 2,
-                        valinit=prop)
+        s_prop = Slider(ax_prop, 'Proportion', -0.666,
+                        2, valinit=prop)
         s_width = Slider(ax_width, 'Width', 0.1, 10,
                          valinit=3)
 
@@ -501,14 +527,17 @@ class PenroseP3:
             ax.patches = []
             ax.add_patch(self.make_patch(proportion=proportion,
                                          width=width, colour=colour))
+            if self.crop:
+                ax.patches[0].set_clip_path(rectangle)
 
         s_prop.on_changed(update)
         s_width.on_changed(update)
         b_next.on_clicked(update)
         b_prev.on_clicked(update)
+        Crop.on_clicked(update)
 
         # Reset button
-        reset_ax = plt.axes([0.8, 0.025, 0.1, 0.05])
+        reset_ax = plt.axes([0.8, 0.01, 0.1, 0.04])
         button = Button(reset_ax, 'Reset', color='beige',
                         hovercolor='0.975')
 
@@ -518,9 +547,16 @@ class PenroseP3:
             s_width.reset()
 
         button.on_clicked(reset)
+        button.on_clicked(change_tiling)
+        button.on_clicked(update)
 
         ax.add_patch(self.make_patch(proportion=prop,
                                      width=3, colour=colour))
+
+        ax.annotate('Generation: {}'.format(self.ngen),
+                    xy=(0.42, 0.01), xycoords='figure fraction',
+                    horizontalalignment='left', verticalalignment='bottom',
+                    fontsize=15)
 
         plt.show()
 

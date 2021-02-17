@@ -2,6 +2,7 @@
 import math
 import webbrowser
 from penrose import PenroseP3, BtileS
+from cropSVG import crop
 
 # A "sun", with randomly-coloured tiles and including arc paths|
 
@@ -36,4 +37,7 @@ tiling.make_tiling()
 tiling.make_plot()
 
 tiling.write_svg('pictures/example2.svg')
-webbrowser.open('C:/Users/flynn/PycharmProjects/penrose/pictures/example2.svg')
+
+crop('example2.svg', 0, 0)
+
+webbrowser.open('C:/Users/flynn/PycharmProjects/penrose/pictures/crop_example2.svg')
