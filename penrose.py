@@ -1,7 +1,7 @@
 import math
 import random
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider, Button, TextBox
+from matplotlib.widgets import Slider, Button
 from matplotlib.path import Path
 import matplotlib.patches as patches
 
@@ -350,10 +350,9 @@ class PenroseP3:
         viewbox = '{} {} {} {}'.format(xmin, ymin, width, height)
 
         svg = ['<?xml version="1.0" encoding="utf-8"?>',
-               '<svg width="{}" height="{}" viewBox="{}"'
-               ' preserveAspectRatio="xMidYMid meet" version="1.1"'
-               ' baseProfile="full" xmlns="http://www.w3.org/2000/svg">'.format(self.config['width'],
-                                                                                self.config['height'], viewbox),
+               '<svg width="{}" height="{}" viewBox="{}" '
+               'xmlns="http://www.w3.org/2000/svg">'.format(self.config['width'],
+                                                            self.config['height'], viewbox),
                '    <defs>',
                '        <clipPath id="window">',
                '            <rect x="0" y="0" width="10" height="10" transform="rotate(0)"/>',
@@ -459,7 +458,7 @@ class PenroseP3:
                                       transform=ax.transData)
 
         def crop_toggle(event):
-            '''Toggles crop and changes axis limits'''
+            """Toggles crop and changes axis limits"""
             self.crop = not self.crop
             if self.crop:
                 ax.set_xlim(x_pos, x_pos + scale)
