@@ -176,6 +176,12 @@ class DeBruijn:
                 # For each other family of grid lines ...
                 for fD in range(eD + 1, self.dim_n):
                     pair = self.Pairs[eD][fD]
+                    shape = pair['shape']
+                    determinant = pair['determinant']
+                    if determinant == 0:
+                        print('Determinant was 0')
+                        raise ValueError
+
                     xf = self.Grid['x'][fD]
                     x_fea = xf * ae
                     yf = self.Grid['y'][fD]
@@ -193,11 +199,6 @@ class DeBruijn:
                     for fV in range(lower2, upper2 + 1):
                         # Find intersection with the eD grid line
                         af = fV - df
-
-                        determinant = pair['determinant']
-                        if determinant == 0:
-                            print('Determinant was 0')
-                            raise ValueError
 
                         x = (y_fea - ye * af) / determinant
                         y = (xe * af - x_fea) / determinant
@@ -254,7 +255,7 @@ class DeBruijn:
                         self.draw_tile(xp, yp, col)
 
                         if self.doPenrose:
-                            self.draw_arc(xp, yp, pair, i_mean, index)
+                            self.draw_arc(xp, yp, shape < 0.5, i_mean, index)
 
     def draw_tile(self, xp, yp, col):
         tile = Geometry()
@@ -270,11 +271,10 @@ class DeBruijn:
 
         self.tile_elements.append(tile)
 
-    def draw_arc(self, xp, yp, pair, i_mean, index):
+    def draw_arc(self, xp, yp, thin, i_mean, index):
 
         paths = []
 
-        thin = pair['shape'] < 0.5
         dx = xp[1] - xp[0]
         dy = yp[1] - yp[0]
         edge2 = dx * dx + dy * dy
